@@ -41,8 +41,8 @@ async def get_Category_By_ProductID(parent_id: int):
     return await get_all_category_by_parentID(parent_id)
 
 # Get Categories with pageByLimit
-@auth_router.get("/getCategoryPagesByLimit")
-async def get_category_page_by_limit(
+@auth_router.get("/getCategoryByPagesLimit")
+async def get_category_by_page_limit(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=500)):
     return await get_categories_pages(page, page_size)

@@ -207,7 +207,7 @@ async def get_all_category_by_parentID(parent_id: int):
         if conn:
             conn.close()
 
-# Get categories with pageByLimit
+# Get categories By pageLimit
 async def get_categories_pages(page: int = 1, page_size: int = 20):
     conn = get_connection()
     if conn is None:
