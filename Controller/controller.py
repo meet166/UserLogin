@@ -8,6 +8,7 @@ import jwt
 from datetime import datetime, timedelta
 from fastapi import HTTPException, Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+import math
 
 security = HTTPBearer()
 
@@ -105,7 +106,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     token = credentials.credentials
 
     if token.startswith("Bearer "):
-        token = token[7:]  
+        token = token[7:]
 
     payload = decode_jwt_token(token)
     if not payload:
@@ -128,5 +129,108 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         return user
+    finally:
+        conn.close()
+
+# Get All Brands
+async def get_all_brands():
+    conn = get_connection()
+    if conn is None:
+        return {"error": "Database connection failed"}
+    try:
+        with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+            cursor.execute("SELECT * FROM brand")
+            rows = cursor.fetchall()
+        return rows
+    finally:
+        if conn:
+            conn.close()
+
+# Get All categories
+async def get_all_categories():
+    conn = get_connection()
+    if conn is None:
+        return {"error": "Database connection failed"}
+    try:
+        with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+            cursor.execute("SELECT * FROM category")
+            rows = cursor.fetchall()
+        return rows 
+    finally:
+        if conn:
+            conn.close()
+
+# Get All categories by nested structure
+async def get_all_categories_by_nested():
+    conn = get_connection()
+    if conn is None:
+        return {"error": "Database connection failed"}
+    try:
+        with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+            cursor.execute("SELECT * FROM category")
+            rows = cursor.fetchall()
+
+        category_nested = {}
+        for cat in rows:
+            category_nested[cat["id"]] = cat
+
+        for cat in rows:
+            cat["child"] = []
+
+        root_categories = []
+
+        for cat in rows:
+            parent_id = cat.get("parent_id")
+            if parent_id and parent_id in category_nested:
+                category_nested[parent_id]["child"].append(cat)
+            else:
+                root_categories.append(cat)
+
+        return root_categories
+
+    finally:
+        if conn:
+            conn.close()
+
+# Get All category by parentID
+async def get_all_category_by_parentID(parent_id: int):
+    conn = get_connection()
+    if conn is None:
+        return {"error": "Database connection failed"}
+    try:
+        with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+            sql = "SELECT * FROM category WHERE parent_id = %s"
+            cursor.execute(sql, (parent_id,))
+            rows = cursor.fetchall()
+        return rows
+    finally:
+        if conn:
+            conn.close()
+
+# Get categories with pageByLimit
+async def get_categories_pages(page: int = 1, page_size: int = 20):
+    conn = get_connection()
+    if conn is None:
+        return {"error": "Database connection failed"}
+
+    try:
+        with conn.cursor() as cursor:
+
+            cursor.execute("SELECT COUNT(*) as total FROM category")
+            total_records = cursor.fetchone()["total"]
+
+            offset = (page - 1) * page_size
+
+            sql = "SELECT * FROM category LIMIT %s OFFSET %s"
+            cursor.execute(sql, (page_size, offset))
+            rows = cursor.fetchall()
+
+        return {
+            "page": page,
+            "page_size": page_size,
+            "total_records": total_records,
+            "total_pages":  math.ceil(total_records / page_size),
+            "data": rows
+        }
     finally:
         conn.close()
