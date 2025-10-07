@@ -1,0 +1,14 @@
+<<<<<<< HEAD
+__pycache__/\n*.pyc\n*.pyo\n*.pyd
+__pycache__/\n*.pyc\n*.pyo\n*.pyd
+__pycache__/\n*.pyc\n*.pyo\n*.pyd
+=======
+__pycache__/
+*.pyc
+>>>>>>> dev
+
+# Environment variables (ignored)
+.env
+
+#README.md
+README.md
