@@ -12,6 +12,7 @@ import math
 
 security = HTTPBearer()
 
+# Encryption Setup
 class Encryptor:
     def __init__(self):
         self.enc_method = "aes-256-cbc"
@@ -56,6 +57,7 @@ class Encryptor:
 
 encryptor = Encryptor()
 
+# JWT Setup
 JWT_SECRET = os.getenv("JWT_SECRET", "xhargargrgaergagsreg4dg")
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRE_MINUTES = 30 * 24 * 60
@@ -80,6 +82,7 @@ def decode_jwt_token(token: str):
         print("JWT InvalidTokenError:", e)
         raise HTTPException(status_code=401, detail="Invalid token")
 
+# Auth & User
 def login_user(name: str, email: str, password: str):
     conn = get_connection()
     if conn is None:
@@ -222,6 +225,34 @@ async def get_categories_pages(page: int = 1, page_size: int = 20):
             offset = (page - 1) * page_size
 
             sql = "SELECT * FROM category LIMIT %s OFFSET %s"
+            cursor.execute(sql, (page_size, offset))
+            rows = cursor.fetchall()
+
+        return {
+            "page": page,
+            "page_size": page_size,
+            "total_records": total_records,
+            "total_pages":  math.ceil(total_records / page_size),
+            "data": rows
+        }
+    finally:
+        conn.close()
+
+# Get products By pageLimit
+async def get_products_pages(page: int = 1, page_size: int = 20):
+    conn = get_connection()
+    if conn is None:
+        return {"error": "Database connection failed"}
+
+    try:
+        with conn.cursor() as cursor:
+
+            cursor.execute("SELECT COUNT(*) as total FROM product")
+            total_records = cursor.fetchone()["total"]
+
+            offset = (page - 1) * page_size
+
+            sql = "SELECT * FROM product LIMIT %s OFFSET %s"
             cursor.execute(sql, (page_size, offset))
             rows = cursor.fetchall()
 

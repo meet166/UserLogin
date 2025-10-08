@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, Query
-from Controller.controller import login_user, get_current_user, get_all_brands, get_all_category_by_parentID, get_categories_pages, get_all_categories, get_all_categories_by_nested
+from Controller.controller import login_user, get_current_user, get_all_brands, get_all_category_by_parentID, get_categories_pages, get_all_categories, get_all_categories_by_nested, get_products_pages
 from pydantic import BaseModel, EmailStr
 from typing import Optional
 
@@ -7,15 +7,19 @@ user_router = APIRouter()
 auth_router = APIRouter(
     dependencies=[Depends(get_current_user)]
 )
+
+# Models 
 class LoginRequest(BaseModel):
     name: str
     email: Optional[EmailStr] = None
     password: str
 
+# User Routes
 @user_router.post("/login")
 def user_login(req: LoginRequest):
     return login_user(req.name, req.email, req.password)
 
+# Protected Routes
 @auth_router.get("/user")
 async def user_details(current_user: dict = Depends(get_current_user)):
     return current_user
@@ -44,5 +48,12 @@ async def get_Category_By_ProductID(parent_id: int):
 @auth_router.get("/getCategoryByPagesLimit")
 async def get_category_by_page_limit(
     page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=500)):
+    page_size: int = Query(ge=1, le=500)):
     return await get_categories_pages(page, page_size)
+
+# Get products with pageByLimit
+@auth_router.get("/getProductByPagesLimit")
+async def get_product_by_page_limit(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(64, ge=1, le=500)):
+    return await get_products_pages(page, page_size)
