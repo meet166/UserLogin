@@ -16,8 +16,8 @@ security = HTTPBearer()
 class Encryptor:
     def __init__(self):
         self.enc_method = "aes-256-cbc"
-        self.enc_key = os.getenv("ENCRYPTION_KEY", "1234")
-        self.enc_seckey = os.getenv("ENCRYPTION_SECRET_KEY", "xhargargrgaergagsreg4dg")
+        self.enc_key = os.getenv("self.enc_key", "1234")
+        self.enc_seckey = os.getenv("self.enc_seckey", "xhargargrgaergagsreg4dg")
         hex_key = hashlib.sha256(self.enc_key.encode()).hexdigest()
         self.gen_key = hex_key[:32].encode("utf-8")
         hex_iv = hashlib.sha256(self.enc_seckey.encode()).hexdigest()
