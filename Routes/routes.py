@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, Query
-from Controller.controller import login_user, get_current_user, get_all_brands, get_all_category_by_parentID, get_categories_pages, get_all_categories, get_all_categories_by_nested, get_products_pages
+from Controller.controller import login_user, get_current_user, get_all_brands, get_all_category_by_parentID, get_categories_pages, get_all_categories, get_all_categories_by_nested, get_products_pages, change_password_and_generate_token, get_all_attributes
 from pydantic import BaseModel, EmailStr
 from typing import Optional
 
@@ -13,6 +13,9 @@ class LoginRequest(BaseModel):
     name: str
     email: Optional[EmailStr] = None
     password: str
+class ChangePasswordRequest(BaseModel):
+    old_password: str
+    new_password: Optional[str] = None
 
 # User Routes
 @user_router.post("/login")
@@ -20,6 +23,18 @@ def user_login(req: LoginRequest):
     return login_user(req.name, req.email, req.password)
 
 # Protected Routes
+@auth_router.post("/changePassword")
+async def user_change_password(
+    req: ChangePasswordRequest, 
+    current_user: dict = Depends(get_current_user)
+):
+    result = await change_password_and_generate_token(
+        current_user["id"],
+        req.old_password,
+        req.new_password
+    )
+    return result
+
 @auth_router.get("/user")
 async def user_details(current_user: dict = Depends(get_current_user)):
     return current_user
@@ -57,3 +72,8 @@ async def get_product_by_page_limit(
     page: int = Query(1, ge=1),
     page_size: int = Query(64, ge=1, le=500)):
     return await get_products_pages(page, page_size)
+
+# Get All Attributes
+@auth_router.get("/getAllAttributes")
+async def get_All_Attributes():
+    return await get_all_attributes()

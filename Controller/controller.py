@@ -9,6 +9,8 @@ from datetime import datetime, timedelta
 from fastapi import HTTPException, Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 import math
+import secrets
+import string
 
 security = HTTPBearer()
 
@@ -62,10 +64,11 @@ JWT_SECRET = os.getenv("JWT_SECRET", "xhargargrgaergagsreg4dg")
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRE_MINUTES = 30 * 24 * 60
 
-def create_jwt_token(user_id: int, email: str):
+def create_jwt_token(user_id: int, email: str, password_changed_at: datetime):
     payload = {
         "sub": str(user_id),
         "email": email,
+        "password_changed_at": password_changed_at.isoformat(),
         "exp": datetime.utcnow() + timedelta(minutes=JWT_EXPIRE_MINUTES)
     }
     token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
@@ -75,13 +78,63 @@ def decode_jwt_token(token: str):
     print("Token received:", token)
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        user_id = int(payload.get("sub"))
+        token_pwd_time = datetime.fromisoformat(payload.get("password_changed_at"))
+
+        conn = get_connection()
+        with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+            cursor.execute("SELECT password_changed_at FROM user WHERE id=%s", (user_id,))
+            row = cursor.fetchone()
+            if not row:
+                raise HTTPException(status_code=401, detail="User not found")
+            
+            db_pwd_time = row["password_changed_at"]
+            
+        if token_pwd_time.replace(microsecond=0) < db_pwd_time.replace(microsecond=0):
+            raise HTTPException(status_code=401, detail="Token expired due to password change")
         return payload
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")
     except jwt.InvalidTokenError as e:
-        print("JWT InvalidTokenError:", e)
         raise HTTPException(status_code=401, detail="Invalid token")
+    
+    finally:
+        conn.close()
+        
+# Change Password
+async def change_password_and_generate_token(user_id: int, old_password: str, new_password: str = None):
+    conn = get_connection()
+    try:
+        with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+            cursor.execute("SELECT password, email FROM user WHERE id=%s", (user_id,))
+            user = cursor.fetchone()
+            if not user:
+                raise HTTPException(status_code=404, detail="User not found")
 
+            if encryptor.encryptString(old_password) != user["password"]:
+                raise HTTPException(status_code=401, detail="Old password incorrect")
+
+            if not new_password:
+                alphabet = string.ascii_letters + string.digits + "!@#$%^&*()"
+                new_password = ''.join(secrets.choice(alphabet) for _ in range(12))
+
+            encrypted_password = encryptor.encryptString(new_password)
+            now = datetime.utcnow()
+            cursor.execute(
+                "UPDATE user SET password=%s, password_changed_at=%s WHERE id=%s",
+                (encrypted_password, now, user_id)
+            )
+            conn.commit()
+
+        new_token = create_jwt_token(user_id, user["email"], now)
+        return {
+            "message": "Password changed successfully",
+            "new_password": new_password,
+            "token": new_token
+        }
+    finally:
+        conn.close()
+        
 # Auth & User
 def login_user(name: str, email: str, password: str):
     conn = get_connection()
@@ -98,13 +151,14 @@ def login_user(name: str, email: str, password: str):
 
         stored_pass = user["password"]
         if encryptor.encryptString(password) == stored_pass:
-            token = create_jwt_token(user_id=user["id"], email=user["email"])
+            token = create_jwt_token(user_id=user["id"], email=user["email"], password_changed_at=user["password_changed_at"])
             return {"message": "Login successful", "token": token}
         else:
             raise HTTPException(status_code=401, detail="Invalid password")
     finally:
         conn.close()
-
+        
+# Get Current User
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
     token = credentials.credentials
 
@@ -131,6 +185,8 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
             user = cursor.fetchone()
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
+        
+        new_token = create_jwt_token(user_id, user["email"], user["password_changed_at"])
         return user
     finally:
         conn.close()
@@ -265,3 +321,17 @@ async def get_products_pages(page: int = 1, page_size: int = 20):
         }
     finally:
         conn.close()
+    
+# Get All attributes
+async def get_all_attributes():
+    conn = get_connection()
+    if conn is None:
+        return {"error": "Database connection failed"}
+    try:
+        with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+            cursor.execute("SELECT * FROM attribute")
+            rows = cursor.fetchall()
+        return rows
+    finally:
+        if conn:
+            conn.close()
