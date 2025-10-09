@@ -87,10 +87,12 @@ def decode_jwt_token(token: str):
             row = cursor.fetchone()
             if not row:
                 raise HTTPException(status_code=401, detail="User not found")
-            
-            db_pwd_time = row["password_changed_at"]
-            
-        if token_pwd_time.replace(microsecond=0) < db_pwd_time.replace(microsecond=0):
+
+            db_pwd_time = row["password_changed_at"].replace(microsecond=0)
+            token_pwd_time = token_pwd_time.replace(microsecond=0)
+            tolerance = timedelta(seconds=1)
+
+        if token_pwd_time + tolerance  < db_pwd_time:
             raise HTTPException(status_code=401, detail="Token expired due to password change")
         return payload
     except jwt.ExpiredSignatureError:
@@ -99,7 +101,8 @@ def decode_jwt_token(token: str):
         raise HTTPException(status_code=401, detail="Invalid token")
     
     finally:
-        conn.close()
+        if conn:
+            conn.close()
         
 # Change Password
 async def change_password_and_generate_token(user_id: int, old_password: str, new_password: str = None):
