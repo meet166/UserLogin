@@ -17,9 +17,9 @@ security = HTTPBearer()
 # Encryption Setup
 class Encryptor:
     def __init__(self):
-        self.enc_method = "aes-256-cbc"
-        self.enc_key = os.getenv("self.enc_key", "1234")
-        self.enc_seckey = os.getenv("self.enc_seckey", "xhargargrgaergagsreg4dg")
+        self.enc_method = "AES-256-CBC"
+        self.enc_key = os.getenv("self.enc_key", "Rencom@roup@LLC!!$()!rec^")
+        self.enc_seckey = os.getenv("self.enc_seckey", "NDN4aTZEcTFSTWVOc2ZGQVRleHdybER0dzZ5NEQ0TEd3MU5WdXZ0Wk1waz0")
         hex_key = hashlib.sha256(self.enc_key.encode()).hexdigest()
         self.gen_key = hex_key[:32].encode("utf-8")
         hex_iv = hashlib.sha256(self.enc_seckey.encode()).hexdigest()
@@ -36,15 +36,12 @@ class Encryptor:
         cipher = AES.new(self.gen_key, AES.MODE_CBC, iv=self.iv)
         padded_text = self._pkcs7_pad(text.encode())
         encrypted = cipher.encrypt(padded_text)
-
         b64_once = base64.b64encode(encrypted).decode("utf-8")
         b64_twice = base64.b64encode(b64_once.encode()).decode("utf-8")
-
         return self.clean_encode(b64_twice)
 
     def decryptString(self, encoded):
         decoded_once = base64.b64decode(self.clean_decode(encoded)).decode("utf-8")
-
         cipher = AES.new(self.gen_key, AES.MODE_CBC, iv=self.iv)
         decrypted = cipher.decrypt(base64.b64decode(decoded_once))
         return self._pkcs7_unpad(decrypted).decode("utf-8").strip()
@@ -60,7 +57,7 @@ class Encryptor:
 encryptor = Encryptor()
 
 # JWT Setup
-JWT_SECRET = os.getenv("JWT_SECRET", "xhargargrgaergagsreg4dg")
+JWT_SECRET = os.getenv("JWT_SECRET", "NDN4aTZEcTFSTWVOc2ZGQVRleHdybER0dzZ5NEQ0TEd3MU5WdXZ0Wk1waz0")
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRE_MINUTES = 30 * 24 * 60
 
@@ -146,7 +143,15 @@ def login_user(name: str, email: str, password: str):
 
     try:
         with conn.cursor(pymysql.cursors.DictCursor) as cursor:
-            cursor.execute("SELECT * FROM user WHERE name=%s AND email=%s", (name, email))
+            cursor.execute("""
+                SELECT *
+                FROM user 
+                WHERE name = %s 
+                AND email = %s
+                AND is_deleted = 0
+                AND status = 1
+                AND allow_access_renark = 1
+            """, (name, email))
             user = cursor.fetchone()
 
         if not user:
@@ -175,7 +180,6 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     user_id = int(payload.get("sub"))
     if not user_id:
         raise HTTPException(status_code=401, detail="Invalid token payload")
-
     user_id = int(user_id)
 
     conn = get_connection()
@@ -184,7 +188,14 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
 
     try:
         with conn.cursor(pymysql.cursors.DictCursor) as cursor:
-            cursor.execute("SELECT * FROM user WHERE id=%s", (user_id,))
+            cursor.execute("""
+                    SELECT *
+                    FROM user 
+                    WHERE id=%s
+                    AND is_deleted = 0
+                    AND status = 1
+                    AND allow_access_renark = 1
+            """, (user_id,))
             user = cursor.fetchone()
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
@@ -201,7 +212,12 @@ async def get_all_brands():
         return {"error": "Database connection failed"}
     try:
         with conn.cursor(pymysql.cursors.DictCursor) as cursor:
-            cursor.execute("SELECT * FROM brand")
+            cursor.execute("""
+                    SELECT *
+                    FROM brand
+                    WHERE status = 1
+                    AND is_deleted = 0
+                    """)
             rows = cursor.fetchall()
         return rows
     finally:
@@ -215,7 +231,12 @@ async def get_all_categories():
         return {"error": "Database connection failed"}
     try:
         with conn.cursor(pymysql.cursors.DictCursor) as cursor:
-            cursor.execute("SELECT * FROM category")
+            cursor.execute("""
+                    SELECT *
+                    FROM category
+                    WHERE status = 1
+                    AND is_deleted = 0
+                    """)
             rows = cursor.fetchall()
         return rows 
     finally:
@@ -229,7 +250,12 @@ async def get_all_categories_by_nested():
         return {"error": "Database connection failed"}
     try:
         with conn.cursor(pymysql.cursors.DictCursor) as cursor:
-            cursor.execute("SELECT * FROM category")
+            cursor.execute("""
+                    SELECT *
+                    FROM category
+                    WHERE status = 1
+                    AND is_deleted = 0
+                    """)
             rows = cursor.fetchall()
 
         category_nested = {}
@@ -261,7 +287,11 @@ async def get_all_category_by_parentID(parent_id: int):
         return {"error": "Database connection failed"}
     try:
         with conn.cursor(pymysql.cursors.DictCursor) as cursor:
-            sql = "SELECT * FROM category WHERE parent_id = %s"
+            sql = """SELECT *
+                    FROM category
+                    WHERE status = 1
+                    AND is_deleted = 0
+                    AND parent_id = %s"""
             cursor.execute(sql, (parent_id,))
             rows = cursor.fetchall()
         return rows
@@ -283,7 +313,11 @@ async def get_categories_pages(page: int = 1, page_size: int = 20):
 
             offset = (page - 1) * page_size
 
-            sql = "SELECT * FROM category LIMIT %s OFFSET %s"
+            sql = """SELECT *
+                    FROM category
+                    WHERE status = 1
+                    AND is_deleted = 0
+                    LIMIT %s OFFSET %s"""
             cursor.execute(sql, (page_size, offset))
             rows = cursor.fetchall()
 
@@ -298,7 +332,7 @@ async def get_categories_pages(page: int = 1, page_size: int = 20):
         conn.close()
 
 # Get products By pageLimit
-async def get_products_pages(page: int = 1, page_size: int = 20):
+async def get_products_pages(page: int = 1, page_size: int = 64):
     conn = get_connection()
     if conn is None:
         return {"error": "Database connection failed"}
@@ -306,12 +340,16 @@ async def get_products_pages(page: int = 1, page_size: int = 20):
     try:
         with conn.cursor() as cursor:
 
-            cursor.execute("SELECT COUNT(*) as total FROM product")
+            cursor.execute("SELECT COUNT(*) as total FROM product ")
             total_records = cursor.fetchone()["total"]
 
             offset = (page - 1) * page_size
 
-            sql = "SELECT * FROM product LIMIT %s OFFSET %s"
+            sql = """SELECT *
+                    FROM product
+                    WHERE status = 1
+                    AND is_deleted = 0
+                    LIMIT %s OFFSET %s"""
             cursor.execute(sql, (page_size, offset))
             rows = cursor.fetchall()
 
@@ -326,13 +364,171 @@ async def get_products_pages(page: int = 1, page_size: int = 20):
         conn.close()
     
 # Get All attributes
-async def get_all_attributes():
+async def get_all_attributes(page: int = 1, page_size: int = 64):
+    conn = get_connection()
+    if conn is None:
+        return {"error": "Database connection failed"}
+    
+    try:
+        with conn.cursor() as cursor:
+
+            cursor.execute("SELECT COUNT(*) as total FROM attribute")
+            total_records = cursor.fetchone()["total"]
+
+            offset = (page - 1) * page_size
+
+            sql = """SELECT *
+                    FROM product
+                    WHERE status = 1
+                    AND is_deleted = 0
+                    LIMIT %s OFFSET %s"""
+            cursor.execute(sql, (page_size, offset))
+            rows = cursor.fetchall()
+
+        return {
+            "page": page,
+            "page_size": page_size,
+            "total_records": total_records,
+            "total_pages":  math.ceil(total_records / page_size),
+            "data": rows
+        }
+    finally:
+        conn.close()
+        
+# Get All Attribute_group
+async def get_all_attribute_group():
     conn = get_connection()
     if conn is None:
         return {"error": "Database connection failed"}
     try:
         with conn.cursor(pymysql.cursors.DictCursor) as cursor:
-            cursor.execute("SELECT * FROM attribute")
+            cursor.execute("""
+                    SELECT *
+                    FROM attribute_group
+                    WHERE status = 1
+                    AND is_deleted = 0
+                    """)
+            rows = cursor.fetchall()
+        return rows
+    finally:
+        if conn:
+            conn.close()
+    
+# Get Merge All Product with related data
+async def get_merge_all_product(page: int = 1, page_size: int = 64):
+    page_size = min(page_size, 500)
+    offset = (page - 1) * page_size
+
+    conn = get_connection()
+    if conn is None:
+        return {"error": "Database connection failed"}
+
+    try:
+        with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+            cursor.execute("""
+                SELECT COUNT(*) AS total
+                FROM product p
+                WHERE p.status = 1
+                AND p.is_deleted = 0
+            """)
+            total_records = cursor.fetchone()["total"]
+
+            sql = """
+                SELECT 
+                    p.*,
+                    
+                    a.attribute_group_ref_id,
+                    a.ctb_ref_id AS attribute_ctb_ref_id,
+                    a.place_from AS attribute_place_from,
+                    a.sync_flag AS attribute_sync_flag,
+                    a.slug AS attribute_slug,
+                    
+                    c.slug AS category_slug,
+                    c.media AS category_media,
+                    c.google_category AS google_category,
+                    c.place_from AS category_place_from,
+                    
+                    pds.directship_id,
+                    
+                    pi.image_url AS product_image_url,
+                    
+                    pm.marking_id AS product_marking_id,
+                    pm.custom_price,
+                    
+                    pp.label_name AS price_label_name,
+                    pp.column_key AS price_column_key,
+                    pp.column_value AS price_column_value,
+                    
+                    pl.name AS product_name,
+                    pl.product_tags,
+                    pl.short_description,
+                    pl.meta_title, 
+                    pl.meta_description,
+                    pl.meta_keyword,
+                    
+                    l.name AS language_name
+
+                FROM product p
+                LEFT JOIN product_attribute pa ON p.id = pa.product_id
+                LEFT JOIN attribute a ON pa.attribute_id = a.id
+                LEFT JOIN product_category pc ON p.id = pc.product_id
+                LEFT JOIN category c ON pc.category_id = c.id
+                LEFT JOIN product_direct_ship pds ON p.id = pds.product_id
+                LEFT JOIN product_image pi ON p.id = pi.product_id
+                LEFT JOIN product_marking pm ON p.id = pm.product_id
+                LEFT JOIN product_pricing pp ON p.id = pp.product_id
+                
+                LEFT JOIN product_lang pl ON pl.product_ref_id = p.ctb_ref_id AND pl.lang_ref_id = 1
+                LEFT JOIN language l ON l.id = 1
+                
+                WHERE p.status = 1
+                AND p.is_deleted = 0
+                ORDER BY p.id
+                LIMIT %s OFFSET %s
+            """
+
+            cursor.execute(sql, (page_size, offset))
+            results = cursor.fetchall()
+
+        return {
+            "page": page,
+            "page_size": page_size,
+            "total_records": total_records,
+            "total_pages": math.ceil(total_records / page_size) if total_records else 1,
+            "data": results
+        }
+
+    finally:
+        if conn:
+            conn.close()
+            
+#Get Merge All Brands with related data
+async def get_merge_all_brands():
+    conn = get_connection()
+    if conn is None:
+        return {"error": "Database connection failed"}
+    try:
+        with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+            sql = """
+            SELECT
+                b.*,
+                bl.lang_ref_id AS brand_lang_ref_id,
+                bl.name AS brand_name,
+                bl.description,
+                bl.bottom_content,
+                bl.meta_title,
+                bl.meta_description,
+                bl.meta_keyword,
+                bl.is_dialect
+
+                FROM brand b
+                LEFT JOIN brand_lang bl ON b.ctb_ref_id = bl.brand_ref_id
+                
+                WHERE b.status = 1
+                AND b.is_deleted = 0
+                ORDER BY b.id
+            """
+            cursor.execute(sql)
             rows = cursor.fetchall()
         return rows
     finally:
