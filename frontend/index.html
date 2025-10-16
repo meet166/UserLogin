@@ -8,9 +8,31 @@
   <!-- Bootstrap CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
+    body {
+      background-color: #f8f9fa;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* Login Card Styling */
+    #loginCard {
+      border-radius: 16px;
+      padding: 40px;
+      background-color: #fff;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      max-width: 500px; /* laptop-friendly width */
+      height: 420px; /* centered height */
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
     /* Gradient Login Button */
     .gradient-btn {
-      background: linear-gradient(to right, grey, white, grey);
+      background: linear-gradient(to right, grey, #dddddd, grey);
       color: black;
       font-weight: 600;
       border: none;
@@ -24,83 +46,105 @@
       opacity: 0.85;
     }
 
-    /* Login Status Box */
-    #loginStatus {
+    /* Toast Style */
+    .toast-body {
+      color: black !important;
+    }
+
+    /* Data Section Hidden Initially */
+    #dataSection {
       display: none;
-      font-weight: 600;
-      margin: 10px 0;
     }
 
     .custom-table-header th {
-      background-color: #D1E7DD !important;
-      color: #000 !important;
+      background-color: #167347 !important;
+      color: #fff !important;
     }
 
-    .flex-grow-1 {
-      min-width: 150px;
-      height: 60px;
-      font-weight: 500;
+    input::-webkit-outer-spin-button,
+    input::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+
+    input[type=number] {
+      -moz-appearance: textfield;
+      appearance: none;
+    }
+
+    input:focus {
+      outline: none;
+      box-shadow: none;
+      border-color: #ccc;
+    }
+
+    .form-control:focus {
+      box-shadow: none !important;
+      border-color: #ccc !important;
+    }
+
+    .same-height {
+    height: 52px !important;       /* Adjust height as needed */
+    display: flex;
+    align-items: center; /* vertically center text */
+    justify-content: center; /* center text horizontally */
     }
   </style>
 </head>
 
-<body class="bg-light">
+<body>
 
-  <div class="container py-4">
-
-    <!-- Login Card -->
-    <div class="card shadow-sm mb-4" id="loginCard">
-      <div class="card-body">
-        <h2 class="mb-3 text-center fw-bold">Login</h2>
-        <form id="loginForm">
-          <div class="mb-3">
-            <input type="text" class="form-control" id="name" placeholder="Name" required>
-          </div>
-          <div class="mb-3">
-            <input type="email" class="form-control" id="email" placeholder="Email" required>
-          </div>
-          <div class="mb-3">
-            <input type="password" class="form-control" id="password" placeholder="Password" required>
-          </div>
-          <button type="submit" class="gradient-btn">Login</button>
-        </form>
-        <div id="loginStatus" class="alert my-2 text-center"></div>
-      </div>
-    </div>
-
-    <!-- Toast Notification -->
-    <div class="position-fixed top-30 start-50 translate-middle p-3" style="z-index: 9999;">
-      <div id="loginToast" class="toast align-items-center border-0 shadow-lg text-center" role="alert"
-        aria-live="assertive" aria-atomic="true" style="background-color: white; min-width: 300px;">
-        <div class="d-flex justify-content-center align-items-center">
-          <div class="toast-body fw-semibold text-success">
-            ✅ Login Successful!
-          </div>
-          <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+  <!-- Login Card -->
+  <div class="card shadow-sm" id="loginCard">
+    <div class="card-body">
+      <h2 class="mb-3 text-center fw-bold">Login</h2>
+      <form id="loginForm">
+        <div class="mb-3">
+          <input type="text" class="form-control" id="name" placeholder="Name" required>
         </div>
+        <div class="mb-3">
+          <input type="email" class="form-control" id="email" placeholder="Email" required>
+        </div>
+        <div class="mb-3">
+          <input type="password" class="form-control" id="password" placeholder="Password" required>
+        </div>
+        <button type="submit" class="gradient-btn">Login</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div class="position-fixed top-30 start-50 translate-middle p-3" style="z-index: 9999;">
+    <div id="loginToast" class="toast align-items-center border-0 shadow-lg text-center" role="alert"
+      aria-live="assertive" aria-atomic="true" style="background-color: white; min-width: 300px;">
+      <div class="d-flex justify-content-center align-items-center">
+        <div class="toast-body fw-semibold text-success">
+          ✅ Login Successful!
+        </div>
+        <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
       </div>
     </div>
+  </div>
 
-    <!-- Data Buttons -->
+  <!-- Hidden Data Section -->
+  <div id="dataSection" class="container-fluid mt-4 px-4">
     <div class="d-flex flex-wrap gap-2 mb-3">
-      <button id="get_all_brands" class="btn btn-success flex-grow-1">Brands</button>
-      <button id="get_all_categories" class="btn btn-success flex-grow-1">Category</button>
-      <button id="get_all_categories_by_nested" class="btn btn-success flex-grow-1">Category by Nested </button>
-      <button id="get_categories_pages" class="btn btn-success flex-grow-1">Category by Page</button>
-      <button id="get_products_pages" class="btn btn-success flex-grow-1">Product by Page</button>
-      <button id="get_all_attributes" class="btn btn-success flex-grow-1">Attributes</button>
-      <button id="get_all_attribute_group" class="btn btn-success flex-grow-1">Attribute Group</button>
-      <button id="get_merge_all_product" class="btn btn-success flex-grow-1">Merge Products</button>
-      <div class="d-flex gap-2 mb-3">
-        <input type="number" id="parentIdInput" class="form-control" placeholder="Enter Parent ID">
-        <button id="get_all_category_by_parentID" class="btn btn-success flex-grow-1">Category by ParentID</button>
-      </div>
+      <button id="get_all_brands" class="btn btn-success flex-grow-1 same-height">Brands</button>
+      <button id="get_all_categories" class="btn btn-success flex-grow-1 same-height">Category</button>
+      <button id="get_all_categories_by_nested" class="btn btn-success flex-grow-1 same-height">Category by Nested</button>
+      <button id="get_categories_pages" class="btn btn-success flex-grow-1 same-height">Category by Page</button>
+      <button id="get_products_pages" class="btn btn-success flex-grow-1 same-height">Product by Page</button>
+      <button id="get_all_attributes" class="btn btn-success flex-grow-1 same-height">Attributes</button>
+      <button id="get_all_attribute_group" class="btn btn-success flex-grow-1 same-height">Attribute Group</button>
+      <button id="get_merge_all_product" class="btn btn-success flex-grow-1 same-height">Merge Products</button>
 
+      <div class="d-flex gap-2 mb-3">
+        <input type="number" id="parentIdInput" class="form-control flex-grow-1 same-height" placeholder="Enter Parent ID" style="height: 42px;">
+        <button id="get_all_category_by_parentID" class="btn btn-success flex-grow-1 same-height">Category by ParentID</button>
+      </div>
     </div>
 
-    <!-- Data Output -->
     <div id="dataOutput" class="table-responsive"></div>
-
   </div>
 
   <!-- Bootstrap JS -->
@@ -158,6 +202,9 @@
           if (res.ok) {
             authToken = data.token;
             document.getElementById("loginCard").style.display = "none";
+            document.body.style.alignItems = "start"; // shift content up after login
+            document.body.style.paddingTop = "20px";
+            document.getElementById("dataSection").style.display = "block";
 
             const toastEl = document.getElementById("loginToast");
             const toast = new bootstrap.Toast(toastEl);
@@ -171,20 +218,12 @@
         }
       });
 
-      // Buttons
+      // Button events
       document.getElementById("get_all_brands").addEventListener("click", () => fetchData("auth/getAllBrands"));
       document.getElementById("get_all_categories").addEventListener("click", () => fetchData("auth/getAllCategories"));
       document.getElementById("get_all_categories_by_nested").addEventListener("click", () => fetchData("auth/getAllCategoriesByNested"));
-      document.getElementById("get_categories_pages").addEventListener("click", () => {
-        currentPage = 1;
-        currentEndpoint = "auth/getCategoryByPagesLimit";
-        fetchData(currentEndpoint, true);
-      });
-      document.getElementById("get_products_pages").addEventListener("click", () => {
-        currentPage = 1;
-        currentEndpoint = "auth/getProductByPagesLimit";
-        fetchData(currentEndpoint, true);
-      });
+      document.getElementById("get_categories_pages").addEventListener("click", () => fetchData("auth/getCategoryByPagesLimit"));
+      document.getElementById("get_products_pages").addEventListener("click", () => fetchData("auth/getProductByPagesLimit"));
       document.getElementById("get_all_attributes").addEventListener("click", () => fetchData("auth/getAllAttributes"));
       document.getElementById("get_merge_all_product").addEventListener("click", () => fetchData("auth/getMergerAllProduct"));
       document.getElementById("get_all_attribute_group").addEventListener("click", () => fetchData("auth/getAllAttributeGroup"));
@@ -194,8 +233,6 @@
         fetchData(`auth/getCategoryByParentID?parent_id=${parentId}`);
       });
     });
-
   </script>
 </body>
-
 </html>
