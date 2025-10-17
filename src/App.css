@@ -1,0 +1,30 @@
+/* Gradient Button Styling */
+.gradient-btn {
+  background: linear-gradient(to right, #6c757d, #dddddd, #6c757d); /* gradient colors */
+  color: black;
+  font-weight: 600;
+  border: 1px solid #ccc; /* visible border */
+  padding: 12px 20px;
+  border-radius: 8px;
+  width: 100%;
+  transition: 0.3s, box-shadow 0.3s;
+}
+
+.gradient-btn:hover {
+  opacity: 0.9;
+  border-color: #888; /* darker border on hover */
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+  cursor: pointer;
+}
+
+/* Table header color */
+.custom-table-header th {
+  background-color: #167347;
+  color: #fff;
+}
+
+/* Input focus clean */
+.form-control:focus {
+  box-shadow: none !important;
+  border-color: #ccc !important;
+}
