@@ -434,7 +434,7 @@ async def get_merge_all_product(page: int = 1, page_size: int = 64):
                 AND p.is_deleted = 0
             """)
             total_records = cursor.fetchone()["total"]
-
+            
             sql = """
                 SELECT 
                     p.*,
@@ -443,9 +443,7 @@ async def get_merge_all_product(page: int = 1, page_size: int = 64):
                     a.ctb_ref_id AS attribute_ctb_ref_id,
                     a.place_from AS attribute_place_from,
                     a.sync_flag AS attribute_sync_flag,
-                    a.slug AS attribute_slug,
-                    
-                    c.slug AS category_slug,
+
                     c.media AS category_media,
                     c.google_category AS google_category,
                     c.place_from AS category_place_from,
@@ -456,19 +454,26 @@ async def get_merge_all_product(page: int = 1, page_size: int = 64):
                     
                     pm.marking_id AS product_marking_id,
                     pm.custom_price,
-                    
-                    pp.label_name AS price_label_name,
-                    pp.column_key AS price_column_key,
-                    pp.column_value AS price_column_value,
-                    
+                    m.name AS marking_name,
+                    m.ribbon_details, 
+                    m.display_position AS marking_display_position,
+                    m.display_on_filter AS marking_display_on_filter,
+
                     pl.name AS product_name,
-                    pl.product_tags,
                     pl.short_description,
-                    pl.meta_title, 
-                    pl.meta_description,
-                    pl.meta_keyword,
                     
-                    l.name AS language_name
+                    l.name AS language_name,
+
+                COALESCE(
+                    CASE
+                        WHEN rp.column_value > 0
+                        AND rp.column_value >= COALESCE(mp.column_value, 0)
+                        THEN rp.column_value
+                        WHEN p.sale_price >= COALESCE(mp.column_value, 0)
+                        THEN p.sale_price
+                        ELSE COALESCE(mp.column_value, 0)
+                    END,
+                0) AS final_price
 
                 FROM product p
                 LEFT JOIN product_attribute pa ON p.id = pa.product_id
@@ -477,14 +482,25 @@ async def get_merge_all_product(page: int = 1, page_size: int = 64):
                 LEFT JOIN category c ON pc.category_id = c.id
                 LEFT JOIN product_direct_ship pds ON p.id = pds.product_id
                 LEFT JOIN product_image pi ON p.id = pi.product_id
+                
+                LEFT JOIN product_pricing rp ON rp.product_id = p.id
+                AND rp.column_key = 'retail_price'
+                
+                LEFT JOIN product_pricing mp ON mp.product_id = p.id
+                AND mp.column_key = 'map_price'
+                
                 LEFT JOIN product_marking pm ON p.id = pm.product_id
-                LEFT JOIN product_pricing pp ON p.id = pp.product_id
+                LEFT JOIN marking m ON pm.marking_id = m.id
                 
                 LEFT JOIN product_lang pl ON pl.product_ref_id = p.ctb_ref_id AND pl.lang_ref_id = 1
                 LEFT JOIN language l ON l.id = 1
                 
-                WHERE p.status = 1
+                WHERE         
+                p.status = 1 
                 AND p.is_deleted = 0
+                AND (m.status = 1 OR m.status IS NULL)
+                AND (m.is_deleted = 0 OR m.is_deleted IS NULL)
+                
                 ORDER BY p.id
                 LIMIT %s OFFSET %s
             """
