@@ -11,6 +11,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 import math
 import secrets
 import string
+import traceback
 
 security = HTTPBearer()
 
@@ -112,11 +113,12 @@ def login_user(name: str, email: str, password: str):
                 SELECT *
                 FROM user 
                 WHERE name = %s 
-                AND email = %s
-                AND is_deleted = 0
-                AND status = 1
-                AND allow_access_renark = 1
-            """, (name, email))
+                    AND email = %s
+                    AND is_deleted = 0
+                    AND status = 1
+                    AND allow_access_renark = 1
+                """,
+                (name, email))
             user = cursor.fetchone()
 
         if not user:
@@ -194,10 +196,11 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
                     SELECT *
                     FROM user 
                     WHERE id=%s
-                    AND is_deleted = 0
-                    AND status = 1
-                    AND allow_access_renark = 1
-            """, (user_id,))
+                        AND is_deleted = 0
+                        AND status = 1
+                        AND allow_access_renark = 1
+                    """, 
+                    (user_id,))
             user = cursor.fetchone()
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
@@ -218,7 +221,7 @@ async def get_all_brands():
                     SELECT *
                     FROM brand
                     WHERE status = 1
-                    AND is_deleted = 0
+                        AND is_deleted = 0
                     """)
             rows = cursor.fetchall()
         return rows
@@ -237,7 +240,7 @@ async def get_all_categories():
                     SELECT *
                     FROM category
                     WHERE status = 1
-                    AND is_deleted = 0
+                        AND is_deleted = 0
                     """)
             rows = cursor.fetchall()
         return rows 
@@ -256,7 +259,7 @@ async def get_all_categories_by_nested():
                     SELECT *
                     FROM category
                     WHERE status = 1
-                    AND is_deleted = 0
+                        AND is_deleted = 0
                     """)
             rows = cursor.fetchall()
 
@@ -292,8 +295,8 @@ async def get_all_category_by_parentID(parent_id: int):
             sql = """SELECT *
                     FROM category
                     WHERE status = 1
-                    AND is_deleted = 0
-                    AND parent_id = %s"""
+                        AND is_deleted = 0
+                        AND parent_id = %s"""
             cursor.execute(sql, (parent_id,))
             rows = cursor.fetchall()
         return rows
@@ -310,29 +313,50 @@ async def get_categories_pages(page: int = 1, page_size: int = 20):
     try:
         with conn.cursor() as cursor:
 
-            cursor.execute("SELECT COUNT(*) as total FROM category")
+            cursor.execute("SELECT COUNT(*) as total FROM category WHERE status = 1 AND is_deleted = 0")
             total_records = cursor.fetchone()["total"]
 
+            if total_records == 0:
+                return {
+                    "page": page,
+                    "page_size": page_size,
+                    "total_records": 0,
+                    "total_pages": 0,
+                    "has_previous": False,
+                    "has_next": False,
+                    "data": []
+                }
+                
+            total_pages = math.ceil(total_records / page_size)
+            if page > total_pages:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid page number. Max pages = {total_pages}"
+                )
             offset = (page - 1) * page_size
-
-            sql = """SELECT *
-                    FROM category
-                    WHERE status = 1
-                    AND is_deleted = 0
-                    LIMIT %s OFFSET %s"""
+            
+            sql = """
+                SELECT *
+                FROM category
+                WHERE is_deleted = 0
+                ORDER BY id ASC
+                LIMIT %s OFFSET %s
+            """
             cursor.execute(sql, (page_size, offset))
             rows = cursor.fetchall()
-
+            
         return {
             "page": page,
             "page_size": page_size,
             "total_records": total_records,
-            "total_pages":  math.ceil(total_records / page_size),
+            "total_pages": total_pages,
+            "has_previous": page > 1,
+            "has_next": page < total_pages,
             "data": rows
         }
     finally:
         conn.close()
-
+        
 # Get products By pageLimit
 async def get_products_pages(page: int = 1, page_size: int = 64):
     conn = get_connection()
@@ -342,30 +366,51 @@ async def get_products_pages(page: int = 1, page_size: int = 64):
     try:
         with conn.cursor() as cursor:
 
-            cursor.execute("SELECT COUNT(*) as total FROM product ")
+            cursor.execute("SELECT COUNT(*) as total FROM product WHERE status = 1 AND is_deleted = 0")
             total_records = cursor.fetchone()["total"]
 
+            if total_records == 0:
+                return {
+                    "page": page,
+                    "page_size": page_size,
+                    "total_records": 0,
+                    "total_pages": 0,
+                    "has_previous": False,
+                    "has_next": False,
+                    "data": []
+                }
+                
+            total_pages = math.ceil(total_records / page_size)
+            if page > total_pages:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid page number. Max pages = {total_pages}"
+                )
             offset = (page - 1) * page_size
-
-            sql = """SELECT *
-                    FROM product
-                    WHERE status = 1
-                    AND is_deleted = 0
-                    LIMIT %s OFFSET %s"""
+            
+            sql = """
+                SELECT *
+                FROM product
+                WHERE is_deleted = 0
+                ORDER BY id ASC
+                LIMIT %s OFFSET %s
+            """
             cursor.execute(sql, (page_size, offset))
             rows = cursor.fetchall()
-
+            
         return {
             "page": page,
             "page_size": page_size,
             "total_records": total_records,
-            "total_pages":  math.ceil(total_records / page_size),
+            "total_pages": total_pages,
+            "has_previous": page > 1,
+            "has_next": page < total_pages,
             "data": rows
         }
     finally:
         conn.close()
     
-# Get All attributes
+# Get All attributes By page
 async def get_all_attributes(page: int = 1, page_size: int = 64):
     conn = get_connection()
     if conn is None:
@@ -373,25 +418,45 @@ async def get_all_attributes(page: int = 1, page_size: int = 64):
     
     try:
         with conn.cursor() as cursor:
-
-            cursor.execute("SELECT COUNT(*) as total FROM attribute")
+            cursor.execute("SELECT COUNT(*) as total FROM attribute WHERE status = 1 AND is_deleted = 0")
             total_records = cursor.fetchone()["total"]
 
+            if total_records == 0:
+                return {
+                    "page": page,
+                    "page_size": page_size,
+                    "total_records": 0,
+                    "total_pages": 0,
+                    "has_previous": False,
+                    "has_next": False,
+                    "data": []
+                }
+                
+            total_pages = math.ceil(total_records / page_size)
+            if page > total_pages:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid page number. Max pages = {total_pages}"
+                )
             offset = (page - 1) * page_size
 
-            sql = """SELECT *
-                    FROM product
-                    WHERE status = 1
-                    AND is_deleted = 0
-                    LIMIT %s OFFSET %s"""
+            sql = """
+                SELECT *
+                FROM attribute
+                WHERE is_deleted = 0
+                ORDER BY id ASC
+                LIMIT %s OFFSET %s
+            """
             cursor.execute(sql, (page_size, offset))
             rows = cursor.fetchall()
-
+            
         return {
             "page": page,
             "page_size": page_size,
             "total_records": total_records,
-            "total_pages":  math.ceil(total_records / page_size),
+            "total_pages": total_pages,
+            "has_previous": page > 1,
+            "has_next": page < total_pages,
             "data": rows
         }
     finally:
@@ -408,7 +473,7 @@ async def get_all_attribute_group():
                     SELECT *
                     FROM attribute_group
                     WHERE status = 1
-                    AND is_deleted = 0
+                        AND is_deleted = 0
                     """)
             rows = cursor.fetchall()
         return rows
@@ -418,9 +483,6 @@ async def get_all_attribute_group():
     
 # Get Merge All Product with related data
 async def get_merge_all_product(page: int = 1, page_size: int = 64):
-    page_size = min(page_size, 500)
-    offset = (page - 1) * page_size
-
     conn = get_connection()
     if conn is None:
         return {"error": "Database connection failed"}
@@ -430,79 +492,147 @@ async def get_merge_all_product(page: int = 1, page_size: int = 64):
             cursor.execute("""
                 SELECT COUNT(*) AS total
                 FROM product p
-                WHERE p.status = 1
-                AND p.is_deleted = 0
+                WHERE is_deleted = 0
             """)
-            total_records = cursor.fetchone()["total"]
+            total_records = cursor.fetchone()["total"]       
+            
+            if total_records == 0:
+                return {
+                    "page": page,
+                    "page_size": page_size,
+                    "total_records": 0,
+                    "total_pages": 0,
+                    "has_previous": False,
+                    "has_next": False,
+                    "data": []
+                }
+                
+            total_pages = math.ceil(total_records / page_size)
+            if page > total_pages:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid page number. Max pages = {total_pages}"
+                )
+            offset = (page - 1) * page_size
             
             sql = """
                 SELECT 
-                    p.*,
-                    
+                    p.id,
+                    p.base_price AS basePrice,
+                    p.sale_price AS salePrice,
+                    p.msrp_price AS msrpPrice,
+                    p.main_image AS mainImage,
+                    p.sku,
+                    p.weight,
+                    p.status AS productStatus,
+                    p.created_date AS productCreateDate,
+                    p.updated_date AS productUpdateDate,
+                    p.sku_group AS skuGroup,
+                    p.slug,
+                    p.piece,
+                    p.height,
+                    p.width,
+                    p.length,
+                    p.tax_flag AS taxFlag,
+                    p.tax_id AS taxId,
+                    p.related_product_id AS relatedProductId,
+                    p.sort_order AS productSortOrder,
+                    p.dealer_designated_sku	AS dealerDesignatedSku,
+                       
                     a.attribute_group_ref_id,
                     a.ctb_ref_id AS attribute_ctb_ref_id,
                     a.place_from AS attribute_place_from,
                     a.sync_flag AS attribute_sync_flag,
-
                     c.media AS category_media,
                     c.google_category AS google_category,
-                    c.place_from AS category_place_from,
+                    c.place_from AS category_place_from,                    
                     
                     pds.directship_id,
+                    pi.image_url AS product_images_url,
                     
-                    pi.image_url AS product_image_url,
+                    pv.id AS product_variation_id,
+                    pv.variation_description AS variationDescription,            
                     
-                    pm.marking_id AS product_marking_id,
-                    pm.custom_price,
+                    pm.showalways AS marking_showalways,
+                    
                     m.name AS marking_name,
                     m.ribbon_details, 
                     m.display_position AS marking_display_position,
                     m.display_on_filter AS marking_display_on_filter,
-
+                    m.sort_order AS marking_sort_order,
+                    
                     pl.name AS product_name,
                     pl.short_description,
+                    pl.full_description,
+                    pl.bullet_features,
+                    pl.product_tags,
                     
-                    l.name AS language_name,
-
-                COALESCE(
-                    CASE
-                        WHEN rp.column_value > 0
-                        AND rp.column_value >= COALESCE(mp.column_value, 0)
-                        THEN rp.column_value
-                        WHEN p.sale_price >= COALESCE(mp.column_value, 0)
-                        THEN p.sale_price
-                        ELSE COALESCE(mp.column_value, 0)
-                    END,
-                0) AS final_price
+                    COALESCE(
+                        CASE
+                            WHEN rp.column_value > 0
+                            AND rp.column_value >= COALESCE(mp.column_value, 0)
+                            THEN rp.column_value
+                            WHEN p.sale_price >= COALESCE(mp.column_value, 0)
+                            THEN p.sale_price
+                            ELSE COALESCE(mp.column_value, 0)
+                        END,
+                    0) AS final_price,
+                    
+                    l.name AS language_name
 
                 FROM product p
-                LEFT JOIN product_attribute pa ON p.id = pa.product_id
-                LEFT JOIN attribute a ON pa.attribute_id = a.id
-                LEFT JOIN product_category pc ON p.id = pc.product_id
-                LEFT JOIN category c ON pc.category_id = c.id
-                LEFT JOIN product_direct_ship pds ON p.id = pds.product_id
-                LEFT JOIN product_image pi ON p.id = pi.product_id
                 
-                LEFT JOIN product_pricing rp ON rp.product_id = p.id
+                LEFT JOIN product_attribute pa
+                ON p.id = pa.product_id
+                LEFT JOIN attribute a
+                ON pa.attribute_id = a.id
+                
+                LEFT JOIN product_category pc
+                ON p.id = pc.product_id
+                LEFT JOIN category c
+                ON pc.category_id = c.id
+                
+                LEFT JOIN product_direct_ship pds
+                ON p.id = pds.product_id
+                
+                LEFT JOIN product_image pi
+                ON pi.product_id = p.id
+
+                LEFT JOIN product_variation pv
+                ON pv.product_id = p.id
+                AND pv.status = 1 
+                AND pv.is_deleted = 0
+                
+                LEFT JOIN product_pricing rp
+                ON rp.product_id = p.id
                 AND rp.column_key = 'retail_price'
                 
-                LEFT JOIN product_pricing mp ON mp.product_id = p.id
+                LEFT JOIN product_pricing mp
+                ON mp.product_id = p.id
                 AND mp.column_key = 'map_price'
                 
-                LEFT JOIN product_marking pm ON p.id = pm.product_id
-                LEFT JOIN marking m ON pm.marking_id = m.id
+                LEFT JOIN product_marking pm
+                ON p.id = pm.product_id
+                AND pm.status = 1 
+                AND pm.is_deleted = 0
+                AND pm.showalways = 1
                 
-                LEFT JOIN product_lang pl ON pl.product_ref_id = p.ctb_ref_id AND pl.lang_ref_id = 1
-                LEFT JOIN language l ON l.id = 1
+                LEFT JOIN marking m
+                ON pm.marking_id = m.id
+                AND m.status = 1 
+                AND m.is_deleted = 0
                 
-                WHERE         
-                p.status = 1 
-                AND p.is_deleted = 0
-                AND (m.status = 1 OR m.status IS NULL)
-                AND (m.is_deleted = 0 OR m.is_deleted IS NULL)
+                LEFT JOIN product_lang pl
+                ON pl.product_ref_id = p.ctb_ref_id
                 
-                ORDER BY p.id
-                LIMIT %s OFFSET %s
+                LEFT JOIN language l
+                ON pl.lang_ref_id = l.ctb_ref_id
+                
+                WHERE
+                    p.status = 1 
+                    AND p.is_deleted = 0
+                    ORDER BY p.id
+                    LIMIT %s OFFSET %s
             """
 
             cursor.execute(sql, (page_size, offset))
@@ -512,9 +642,16 @@ async def get_merge_all_product(page: int = 1, page_size: int = 64):
             "page": page,
             "page_size": page_size,
             "total_records": total_records,
-            "total_pages": math.ceil(total_records / page_size),
+            "total_pages": total_pages,
+            "has_previous": page > 1,
+            "has_next": page < total_pages,
             "data": results
         }
+        
+    except Exception as e:
+        print("SQL/Server Error:", str(e))
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Server Error: {e}")
 
     finally:
         if conn:
