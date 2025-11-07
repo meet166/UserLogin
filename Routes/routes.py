@@ -19,8 +19,8 @@ class ChangePasswordRequest(BaseModel):
 
 # User Routes
 @user_router.post("/login")
-def user_login(req: LoginRequest):
-    return login_user(req.name, req.email, req.password)
+async def user_login(req: LoginRequest):
+    return await login_user(req.name, req.email, req.password)
 
 # Protected Routes
 @auth_router.post("/changePassword")

@@ -1,15 +1,10 @@
-import pymysql
+import aiomysql
 
-def get_connection():
-    try:
-        conn = pymysql.connect(
-            host="localhost",
-            user="root",
-            password="root",
-            database="db",
-            cursorclass=pymysql.cursors.DictCursor
-        )
-        return conn
-    except Exception as e:
-        print("Database connection error:", e)
-        return None
+async def get_connection():
+    return await aiomysql.connect(
+        host="localhost",
+        user="root",
+        password="root",
+        db="db",
+        autocommit=True
+    )
