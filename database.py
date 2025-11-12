@@ -5,6 +5,6 @@ async def get_connection():
         host="localhost",
         user="root",
         password="root",
-        db="db",
+        db="db1",
         autocommit=True
     )

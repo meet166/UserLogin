@@ -1,5 +1,4 @@
 from database import get_connection
-import aiomysql
 import base64
 import hashlib
 from Crypto.Cipher import AES
@@ -543,6 +542,7 @@ async def get_merge_all_product(page: int = 1, page_size: int = 64):
             brandID = [1, 7]
             placeholders = ','.join(['%s'] * len(brandID))
             defaultlang = 1
+            today = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         
         # Main query to fetch merged product data    
             sql = f"""
@@ -554,21 +554,22 @@ async def get_merge_all_product(page: int = 1, page_size: int = 64):
                     p.msrp_price AS msrpPrice,
                     p.main_image AS mainImage,
                     p.sku,
-                    p.weight,
                     p.status AS productStatus,
                     p.created_date AS productCreateDate,
                     p.updated_date AS productUpdateDate,
                     p.sku_group AS skuGroup,
                     p.slug,
                     p.piece,
-                    p.height,
+                    p.weight,
                     p.width,
+                    p.depth,
+                    p.height,
                     p.length,
                     p.tax_flag AS taxFlag,
                     p.tax_id AS taxId,
                     p.related_product_id AS relatedProductId,
                     p.sort_order AS productSortOrder,
-                    p.dealer_designated_sku	AS dealerDesignatedSku,
+                    p.dealer_designated_sku	AS reverseSku,
                     
                     m.id AS markingId,
                     m.name AS markingName,
@@ -582,7 +583,8 @@ async def get_merge_all_product(page: int = 1, page_size: int = 64):
                     pl.full_description AS FullDescription,
                     pl.bullet_features AS BulletFeatures,
                     pl.product_tags AS ProductTags,
-                    
+                    pl.advance_dimension AS AdvanceDimension,
+
                     COALESCE(
                         CASE
                             WHEN COALESCE(pm.custom_price, 0) > 0 THEN pm.custom_price
@@ -594,7 +596,7 @@ async def get_merge_all_product(page: int = 1, page_size: int = 64):
                     0) AS final_price
                     
                 FROM product p
-            
+                
                 LEFT JOIN product_lang pl
                     ON pl.product_ref_id = p.ctb_ref_id
                             
@@ -610,8 +612,14 @@ async def get_merge_all_product(page: int = 1, page_size: int = 64):
                     ON p.id = pm.product_id
                     AND pm.status = 1 
                     AND pm.is_deleted = 0
-                    AND pm.showalways = 1
-                
+                    AND (
+                        pm.showalways = 1
+                        OR (
+                            (pm.start_date IS NULL OR pm.start_date <= %s)
+                            AND (pm.end_date IS NULL OR pm.end_date >= %s)
+                        )
+                    )
+                                
                 LEFT JOIN marking m
                     ON pm.marking_id = m.id
                     AND m.status = 1 
@@ -620,7 +628,7 @@ async def get_merge_all_product(page: int = 1, page_size: int = 64):
                 LEFT JOIN language l
                     ON pl.lang_ref_id = l.ctb_ref_id
                     AND l.id = %s
-                
+                    
                 WHERE
                     p.status = 1 
                         AND p.is_deleted = 0
@@ -629,7 +637,7 @@ async def get_merge_all_product(page: int = 1, page_size: int = 64):
                     ORDER BY p.id
                     LIMIT %s OFFSET %s
             """
-            params =[defaultlang] + brandID + [page_size, offset]
+            params =[today, today, defaultlang] + brandID + [page_size, offset]
             await cursor.execute(sql, params)
             results = await cursor.fetchall()
             
@@ -638,9 +646,11 @@ async def get_merge_all_product(page: int = 1, page_size: int = 64):
             "page_size": page_size,
             "total_records": total_records,
             "total_pages": math.ceil(total_records / page_size),
+            "has_previous": page > 1,
+            "has_next": page < total_pages,
             "data": results
         }
-
+        
     finally:
         if conn:
             conn.close()
