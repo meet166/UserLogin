@@ -12,7 +12,6 @@ import secrets
 import string
 from aiomysql.cursors import DictCursor
 
-
 security = HTTPBearer()
 
 # Encryption Setup
