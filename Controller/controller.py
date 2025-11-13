@@ -11,20 +11,9 @@ import math
 import secrets
 import string
 from aiomysql.cursors import DictCursor
-import aiomysql
 
 security = HTTPBearer()
 
-async def get_connection():
-    return await aiomysql.connect(
-        host=os.getenv("host", "localhost"),
-        port=int(os.getenv("port", "3306")),
-        user=os.getenv("user", "root"),
-        password=os.getenv("password", "root"),
-        db=os.getenv("db", "db1"),
-        autocommit=True
-    )
-    
 # Encryption Setup
 class Encryptor:
     def __init__(self):
