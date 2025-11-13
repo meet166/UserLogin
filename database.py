@@ -8,5 +8,4 @@ async def get_connection():
         user=os.getenv("MYSQL_USER", "root"),
         password=os.getenv("MYSQL_PASSWORD", "root"),
         db=os.getenv("MYSQL_DB", "db1"),
-        autocommit=True
     )
