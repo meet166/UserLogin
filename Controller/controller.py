@@ -12,6 +12,7 @@ import secrets
 import string
 from aiomysql.cursors import DictCursor
 
+
 security = HTTPBearer()
 
 # Encryption Setup
@@ -90,7 +91,7 @@ async def decode_jwt_token(token: str):
             token_pwd_time = token_pwd_time.replace(microsecond=0)
             tolerance = timedelta(seconds=1)
 
-        if token_pwd_time + tolerance  < db_pwd_time:
+        if token_pwd_time + tolerance < db_pwd_time:
             raise HTTPException(status_code=401, detail="Token expired due to password change")
         return payload
     except jwt.ExpiredSignatureError:
