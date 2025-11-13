@@ -18,12 +18,12 @@ class ChangePasswordRequest(BaseModel):
     new_password: Optional[str] = None
 
 # User Routes
-@user_router.post("/login")
+@user_router.post("/login", operation_id="user_Login")
 async def user_login(req: LoginRequest):
     return await login_user(req.name, req.email, req.password)
 
 # Protected Routes
-@auth_router.post("/changePassword")
+@auth_router.post("/changePassword", operation_id="change_Password")
 async def user_change_password(
     req: ChangePasswordRequest, 
     current_user: dict = Depends(get_current_user)
@@ -35,64 +35,64 @@ async def user_change_password(
     )
     return result
 
-@auth_router.get("/user")
+@auth_router.get("/user", operation_id="get_User_Details")
 async def user_details(current_user: dict = Depends(get_current_user)):
     return current_user
 
 # get All Brands
-@auth_router.get("/getAllBrands")
+@auth_router.get("/getAllBrands", operation_id="get_All_Brands")
 async def get_Brands():
     return await get_all_brands()
 
 # Get All Categories
-@auth_router.get("/getAllCategories")
+@auth_router.get("/getAllCategories", operation_id="get_All_Categories")
 async def get_All_Categories():
     return await get_all_categories()
 
 # Get All Categories with nested structure
-@auth_router.get("/getAllCategoriesByNested")
+@auth_router.get("/getAllCategoriesByNested", operation_id="get_All_Categories_Nested_Structure")
 async def get_Categories_Nested_Structure():
     return await get_all_categories_by_nested()
 
 # Get Category By ParentID
-@auth_router.get("/getCategoryByParentID")
+@auth_router.get("/getCategoryByParentID", operation_id="get_Category_By_ParentID")
 async def get_Category_By_ProductID(parent_id: int):
     return await get_all_category_by_parentID(parent_id)
 
 # Get Categories with pageByLimit
-@auth_router.get("/getCategoryByPagesLimit")
+@auth_router.get("/getCategoryByPagesLimit", operation_id="get_Category_By_Pages_Limit")
 async def get_category_by_page_limit(
     page: int = Query(1, ge=1),
     page_size: int = Query(ge=1, le=500)):
     return await get_categories_pages(page, page_size)
 
 # Get products with pageByLimit
-@auth_router.get("/getProductByPagesLimit")
+@auth_router.get("/getProductByPagesLimit", operation_id="get_Product_By_Pages_Limit")
 async def get_product_by_page_limit(
     page: int = Query(1, ge=1),
     page_size: int = Query(64, ge=1, le=500)):
     return await get_products_pages(page, page_size)
 
 # Get All Attributes
-@auth_router.get("/getAllAttributes")
+@auth_router.get("/getAllAttributes", operation_id="get_All_Attributes")
 async def get_All_Attributes(
     page: int = Query(1, ge=1),
     page_size: int = Query(64, ge=1, le=500)):
     return await get_all_attributes(page, page_size)
 
 # Get All Attribute Group
-@auth_router.get("/getAllAttributeGroup")
+@auth_router.get("/getAllAttributeGroup", operation_id="get_All_Attribute_Group")
 async def get_All_Attribute_Group():
     return await get_all_attribute_group()
 
 # Get Merge All Product with related data
-@auth_router.get("/getMergerAllProduct")
+@auth_router.get("/getMergerAllProduct", operation_id="get_Merge_All_Product")
 async def get_Merge_All_Product(
     page: int = Query(1, ge=1),
     page_size: int = Query(64, ge=1, le=500)):
     return await get_merge_all_product(page, page_size)
 
 # Get Merge All Brands with related data
-@auth_router.get("/getMergeAllBrands")
+@auth_router.get("/getMergeAllBrands",operation_id="get_Merge_All_Brands")
 async def get_Merge_All_Brands():
     return await get_merge_all_brands()
