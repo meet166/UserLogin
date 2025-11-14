@@ -6,5 +6,5 @@ from config import setupCors
 app = FastAPI(title="User Login API")
 setupCors(app)
 
-app.include_router(routes.user_router, prefix="/user", tags=["User"])
-app.include_router(routes.auth_router, prefix="/auth", tags=["Auth"])
+app.include_router(routes.user_router, prefix="/user", tags=["user"])
+app.include_router(routes.auth_router, prefix="/auth", tags=["auth"])
